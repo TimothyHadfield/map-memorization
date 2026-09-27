@@ -1,0 +1,6 @@
+# Separate desktop auto-typer script, its docs and its Python requirements (not part of the web app)
+jetpunk_cheat.py
+AUTO-TYPER.md
+requirements.txt
+.claude/
+__pycache__/
