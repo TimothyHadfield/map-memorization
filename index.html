@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tim's Geoguesser</title>
+    <meta name="description" content="A map quiz for learning the world's countries: name every country or find each one on the map.">
+    <link rel="icon" href="data:,">
+    <link rel="preconnect"href="https://raw.githubusercontent.com" crossorigin>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * {
             margin: 0;
@@ -666,7 +669,7 @@
     <div id="menu-screen" class="screen active">
         <div class="header">
             <h1>Tim's Geoguesser</h1>
-            <button class="settings-btn" onclick="showSettings()">&#9881;</button>
+            <button class="settings-btn" onclick="showSettings()" aria-label="Settings">&#9881;</button>
         </div>
         <div class="menu-map-container">
             <div id="menu-map"></div>
@@ -829,7 +832,7 @@
     <!-- Quiz Type Selection Screen -->
     <div id="quiz-select-screen" class="screen">
         <div class="header">
-            <button class="back-btn" onclick="showScreen('menu-screen')">&#8592;</button>
+            <button class="back-btn" onclick="showScreen('menu-screen')" aria-label="Back">&#8592;</button>
             <h1>Choose Quiz Type</h1>
             <div style="width: 40px;"></div>
         </div>
@@ -846,7 +849,7 @@
     <!-- Quiz Screen -->
     <div id="quiz-screen" class="screen">
         <div class="quiz-header">
-            <button class="back-btn" onclick="confirmQuit()">&#8592;</button>
+            <button class="back-btn" onclick="confirmQuit()" aria-label="Quit quiz">&#8592;</button>
             <div class="quiz-progress" id="quiz-progress">0 / 0</div>
             <div class="quiz-timer" id="quiz-timer">10</div>
         </div>
@@ -854,7 +857,7 @@
         <div class="quiz-interface" id="quiz-interface">
             <!-- Type-in interface -->
             <div class="type-in-interface" id="type-in-interface" style="display: none;">
-                <input type="text" id="country-input" placeholder="Type country name..." autocomplete="off">
+                <input type="text" id="country-input" placeholder="Type country name..." autocomplete="off" aria-label="Country name">
             </div>
             <!-- Spot-on-map interface -->
             <div class="spot-interface" id="spot-interface" style="display: none;">
@@ -903,7 +906,7 @@
                     <span>Display dots on countries not yet guessed (Type-in only)</span>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" id="setting-show-missing" onchange="saveSetting('showMissingCountries', this.checked)">
+                    <input type="checkbox" id="setting-show-missing" aria-label="Show Missing Countries" onchange="saveSetting('showMissingCountries', this.checked)">
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -913,7 +916,7 @@
                     <span>Read country names aloud (Spot on Map only)</span>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" id="setting-voice" onchange="saveSetting('voicePronunciation', this.checked)">
+                    <input type="checkbox" id="setting-voice" aria-label="Voice Pronunciation" onchange="saveSetting('voicePronunciation', this.checked)">
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -922,7 +925,7 @@
                     Naming Mode
                     <span>Accept simplified names or require exact spelling</span>
                 </div>
-                <select class="setting-select" id="setting-naming" onchange="saveSetting('namingMode', this.value)">
+                <select class="setting-select" id="setting-naming" aria-label="Naming Mode" onchange="saveSetting('namingMode', this.value)">
                     <option value="default">Default (Aliases OK)</option>
                     <option value="exact">Exact</option>
                 </select>
@@ -933,7 +936,7 @@
                     <span>Show country count during quiz</span>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" id="setting-progress" onchange="saveSetting('showProgress', this.checked)" checked>
+                    <input type="checkbox" id="setting-progress" aria-label="Display Progress" onchange="saveSetting('showProgress', this.checked)" checked>
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -943,7 +946,7 @@
                     <span>10 seconds per country</span>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" id="setting-timed" onchange="saveSetting('timedMode', this.checked)">
+                    <input type="checkbox" id="setting-timed" aria-label="Timed Mode" onchange="saveSetting('timedMode', this.checked)">
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -951,7 +954,7 @@
         </div>
     </div>
 
-    <script src="data/countries-data.js"></script>
+    <script defer src="data/countries-data.js"></script>
     <script>
         // ===============================
         // Application State
@@ -1205,8 +1208,8 @@
 
         async function loadGeoJson() {
             // Try multiple sources for GeoJSON data
+            // (There is no local data/countries.geojson; trying it first gave a 404 on every load)
             const sources = [
-                'data/countries.geojson',  // Local file first
                 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson',
                 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json'
             ];
@@ -1367,6 +1370,15 @@
             AppState.selectedCategories.forEach(categoryId => {
                 const categoryCountries = COUNTRY_DATA.categories[categoryId] || [];
                 categoryCountries.forEach(iso => countries.add(iso));
+            });
+
+            // A fully checked region also includes its countries that sit in no
+            // subregion (USA/Canada/Mexico; East and Central Asia)
+            ['north-central-america', 'europe', 'africa', 'asia'].forEach(parentId => {
+                const subs = getSubcategories(parentId);
+                if (subs.every(s => AppState.selectedCategories.has(s))) {
+                    (COUNTRY_DATA.categories[parentId] || []).forEach(iso => countries.add(iso));
+                }
             });
 
             return Array.from(countries);
@@ -1824,21 +1836,26 @@
         }
 
         function matchesCountry(input, country) {
-            const normalizedInput = input.toLowerCase().trim();
+            const normalizedInput = normalizeName(input);
 
             if (AppState.settings.namingMode === 'exact') {
                 // Exact mode - must match exact name (ignoring accents)
-                const exactName = removeAccents(country.exactName || country.name).toLowerCase();
+                const exactName = normalizeName(country.exactName || country.name);
                 return normalizedInput === exactName;
             } else {
                 // Default mode - check aliases
-                const aliases = [country.name, ...(country.aliases || [])].map(a => removeAccents(a).toLowerCase());
+                const aliases = [country.name, ...(country.aliases || [])].map(normalizeName);
                 return aliases.some(alias => alias === normalizedInput);
             }
         }
 
         function removeAccents(str) {
             return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        // Accents ignored, and the iPhone keyboard's curly apostrophe counts as a straight one
+        function normalizeName(str) {
+            return removeAccents(str).replace(/[\u2018\u2019\u02bc]/g, "'").toLowerCase().trim();
         }
 
         // ===============================
@@ -1875,7 +1892,8 @@
         }
 
         function handleTimerExpired() {
-            if (AppState.quizType === 'spot-on-map' && !AppState.quiz.revealed) {
+            if (AppState.quizType === 'spot-on-map') {
+                // Also after a reveal, otherwise the timer counted on below zero
                 const targetIso = AppState.quiz.countries[AppState.quiz.currentIndex];
                 AppState.quiz.answers[targetIso] = { correct: false, attempts: 0, timedOut: true };
                 colorCountry(targetIso, '#f44336');
