@@ -585,6 +585,32 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
+        /* In-page dialog (replaces the browser's alert/confirm) */
+        #app-dialog {
+            z-index: 3000;
+        }
+
+        #app-dialog .modal {
+            max-width: 360px;
+            padding: 25px;
+        }
+
+        .app-dialog-message {
+            line-height: 1.4;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .app-dialog-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .app-dialog-buttons .results-btn {
+            flex: 1;
+            padding: 12px;
+        }
+
         /* Missing Country Dots */
         .missing-dot {
             width: 6px;
@@ -954,6 +980,17 @@
         </div>
     </div>
 
+    <!-- In-page dialog (used instead of the browser's alert/confirm) -->
+    <div class="modal-overlay" id="app-dialog">
+        <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-message">
+            <p class="app-dialog-message" id="app-dialog-message"></p>
+            <div class="app-dialog-buttons">
+                <button class="results-btn secondary" id="app-dialog-cancel">Cancel</button>
+                <button class="results-btn primary" id="app-dialog-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script defer src="data/countries-data.js"></script>
     <script>
         // ===============================
@@ -997,6 +1034,7 @@
         // Initialization
         // ===============================
         document.addEventListener('DOMContentLoaded', () => {
+            setupDialog();
             loadSettings();
             initMenuMap();
             loadGeoJson();
@@ -1229,7 +1267,7 @@
             }
 
             console.error('Failed to load GeoJSON from any source');
-            alert('Failed to load map data. Please check your internet connection and refresh the page.');
+            showAlert('Failed to load map data. Please check your internet connection and refresh the page.');
         }
 
         function renderMenuMapCountries() {
@@ -1864,15 +1902,28 @@
         function startTimer() {
             timeLeft = 10;
             updateTimerDisplay();
+            timerInterval = setInterval(timerTick, 1000);
+        }
 
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                updateTimerDisplay();
+        function timerTick() {
+            timeLeft--;
+            updateTimerDisplay();
 
-                if (timeLeft <= 0) {
-                    handleTimerExpired();
-                }
-            }, 1000);
+            if (timeLeft <= 0) {
+                handleTimerExpired();
+            }
+        }
+
+        // Pause while a dialog is open (as the browser's confirm() did); returns true if it was running
+        function pauseTimer() {
+            if (!timerInterval) return false;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            return true;
+        }
+
+        function resumeTimer() {
+            if (!timerInterval) timerInterval = setInterval(timerTick, 1000);
         }
 
         function resetTimer() {
@@ -1972,11 +2023,79 @@
         }
 
         function confirmQuit() {
-            if (confirm('Are you sure you want to quit the quiz?')) {
-                stopTimer();
-                clearMissingDots();
-                showScreen('menu-screen');
-            }
+            showDialog('Are you sure you want to quit the quiz?', true).then(ok => {
+                if (ok) {
+                    stopTimer();
+                    clearMissingDots();
+                    showScreen('menu-screen');
+                }
+            });
+        }
+
+        // ===============================
+        // In-page dialog (no browser alert/confirm)
+        // ===============================
+        // OK / Enter = true; Cancel / Escape / tap outside = false.
+        // The quiz timer is paused while it is open and keys don't reach the quiz.
+        let dialogClose = null;
+
+        function showDialog(message, withCancel) {
+            if (dialogClose) dialogClose(false);
+            const overlay = document.getElementById('app-dialog');
+            const okBtn = document.getElementById('app-dialog-ok');
+            const cancelBtn = document.getElementById('app-dialog-cancel');
+            const returnFocus = document.activeElement;
+            const timerWasRunning = pauseTimer();
+
+            document.getElementById('app-dialog-message').textContent = message;
+            cancelBtn.style.display = withCancel ? '' : 'none';
+            overlay.classList.add('active');
+            okBtn.focus();
+
+            return new Promise(resolve => {
+                dialogClose = (result) => {
+                    dialogClose = null;
+                    overlay.classList.remove('active');
+                    if (timerWasRunning) resumeTimer();
+                    if (returnFocus && document.contains(returnFocus) && returnFocus.focus) {
+                        returnFocus.focus();
+                    }
+                    resolve(result);
+                };
+            });
+        }
+
+        function showAlert(message) {
+            return showDialog(message, false);
+        }
+
+        function setupDialog() {
+            const overlay = document.getElementById('app-dialog');
+            document.getElementById('app-dialog-ok').addEventListener('click', () => dialogClose && dialogClose(true));
+            document.getElementById('app-dialog-cancel').addEventListener('click', () => dialogClose && dialogClose(false));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay && dialogClose) dialogClose(false);
+            });
+            // Capture phase, so no key reaches the quiz or the map while the dialog is open
+            const trapKeys = (e) => {
+                if (!dialogClose) return;
+                const okBtn = document.getElementById('app-dialog-ok');
+                const cancelBtn = document.getElementById('app-dialog-cancel');
+                if (e.type === 'keydown') {
+                    if (e.key === 'Escape') {
+                        dialogClose(false);
+                    } else if (e.key === 'Enter') {
+                        dialogClose(true);
+                    } else if (e.key === 'Tab' && cancelBtn.style.display !== 'none') {
+                        (document.activeElement === okBtn ? cancelBtn : okBtn).focus();
+                    } else if (e.key === ' ' && (document.activeElement === okBtn || document.activeElement === cancelBtn)) {
+                        dialogClose(document.activeElement === okBtn);
+                    }
+                }
+                e.preventDefault();
+                e.stopPropagation();
+            };
+            ['keydown', 'keypress', 'keyup'].forEach(t => document.addEventListener(t, trapKeys, true));
         }
 
         function tryAgain() {
