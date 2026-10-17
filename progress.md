@@ -18,6 +18,8 @@ None set by Tim. The app is published and working; the 2026-10-16 sweep fixed cl
 
 - 2026-10-16 sweep: fixed whole-region quizzes missing 13 countries, Spot-on-Map timer going below zero after a reveal, iPhone curly apostrophe/accents in Type In, a 404 on every load; added aria-labels, meta description, defer/preconnect. Report: `laptop-ops/coding-and-claude/reports/sweep-2026-10-16/map-memorization.md`.
 
+- 2026-10-17: no browser dialogs any more. Quit-quiz confirm and the map-load-failed alert use an in-page dialog (`showDialog`/`showAlert`, `#app-dialog`, settings-modal look) that pauses the quiz timer while open; verified headless (WebKit 393px + desktop) for OK/Enter, Cancel/Escape/outside, key trap, focus return, timer pause. Commit b22799f.
+
 ## Authorized next steps
 None.
 
