@@ -9,6 +9,7 @@ None set by Tim. The app is published and working; the 2026-10-16 sweep fixed cl
 ## Status
 | Area | State |
 |---|---|
+| Site icon (tab + iPhone home screen) | Added 2026-10-17: white globe on the purple gradient; `icon.svg` + `apple-touch-icon.png` |
 | Menu (region picker on the map) | Works, phone and laptop |
 | Type In quiz | Works |
 | Spot on Map quiz | Works, incl. small-country circles and 3-try reveal |
